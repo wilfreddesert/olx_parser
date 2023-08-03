@@ -50,10 +50,7 @@ async def root():
 async def get_cards(request: Request):
     setup_database()
     urls = await get_olx_pages(request.pages, request.filters.model_dump())
-    print("done collecting urls")
     cards = await get_cards_metadata(urls)
-    print("done collecting cards")
-
     cards_with_custom_fields = add_custom_fields(cards)
     cards_filtered = apply_custom_filters(
         cards_with_custom_fields,

@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "olx-parser"
+version = "0.1.0"
+description = ""
+authors = ["timur.sharapov <lagrange31416@gmail.com>"]
+readme = "README.md"
+packages = [{include = "olx_parser"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aiohttp = "^3.8.5"
+fastapi = "^0.100.1"
+uvicorn = {extras = ["standard"], version = "^0.23.2"}
+bs4 = "^0.0.1"
+lxml = "^4.9.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

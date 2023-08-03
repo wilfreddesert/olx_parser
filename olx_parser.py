@@ -154,7 +154,6 @@ async def get_olx_page(session, p, filters=None):
         base_url = build_url(base_url, filters)
 
     url = f"{base_url}&page={p}"
-    print(url)
     async with session.get(url) as response:
         text = await response.text()
         soup = BeautifulSoup(text, "lxml")
@@ -170,7 +169,6 @@ async def get_olx_pages(pages=5, filters=None):
         for result in results:
             cards.extend(result)
     conn = sqlite3.connect("olx.db")
-    print(pages, len(cards), len(set(cards)))
     cursor = conn.cursor()
     cursor.execute("BEGIN TRANSACTION")
     for card in cards:
