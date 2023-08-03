@@ -258,19 +258,22 @@ def add_custom_fields(cards):
     return new_cards
 
 
-def apply_custom_filters(cards, is_first_floor="no", is_last_floor="no", btypes=None):
+def apply_custom_filters(
+    cards, exclude_first_floor="yes", exclude_last_floor="yes", btypes=None
+):
     if btypes is None:
         btypes = [BUILDING_TYPE_BRICK]
     filtered_cards = []
     building_types_mapped = [building_type_mapping[b] for b in btypes]
     for card in cards:
-        first_floor = card.get(CUSTOM_FIELD_IS_FIRST_FLOOR)
-        last_floor = card.get(CUSTOM_FIELD_IS_LAST_FLOOR)
+        is_first_floor = card.get(CUSTOM_FIELD_IS_FIRST_FLOOR)
+        is_last_floor = card.get(CUSTOM_FIELD_IS_LAST_FLOOR)
         building_type = card.get(CUSTOM_FIELD_BUILDING_TYPE)
-        if (
-            (first_floor == yes_no_mapping[is_first_floor] or first_floor is None)
-            and (last_floor == yes_no_mapping[is_last_floor] or last_floor is None)
-            and (building_type in building_types_mapped or building_type is None)
-        ):
-            filtered_cards.append(card)
+        if exclude_first_floor == "yes" and is_first_floor == yes_no_mapping["yes"]:
+            continue
+        if exclude_last_floor == "yes" and is_last_floor == yes_no_mapping["yes"]:
+            continue
+        if building_type not in building_types_mapped:
+            continue
+        filtered_cards.append(card)
     return filtered_cards
