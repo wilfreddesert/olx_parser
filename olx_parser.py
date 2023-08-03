@@ -198,6 +198,7 @@ async def get_card_metadata(session, url_path: str):
         card_metadata["Цена"] = price.text if price else None
         images = soup.find_all(class_=IMAGES_CLASS_ID)
         card_metadata["Фото"] = [i["src"] for i in images]
+        card_metadata["Ссылка"] = url_path
 
     return card_metadata
 
@@ -254,10 +255,11 @@ def add_custom_fields(cards):
     return new_cards
 
 
-def apply_custom_filters(
-    cards, is_first_floor="no", is_last_floor="no", btype=BUILDING_TYPE_BRICK
-):
+def apply_custom_filters(cards, is_first_floor="no", is_last_floor="no", btypes=None):
+    if btypes is None:
+        btypes = [BUILDING_TYPE_BRICK]
     filtered_cards = []
+    building_types_mapped = [building_type_mapping[b] for b in btypes]
     for card in cards:
         first_floor = card.get(CUSTOM_FIELD_IS_FIRST_FLOOR)
         last_floor = card.get(CUSTOM_FIELD_IS_LAST_FLOOR)
@@ -265,7 +267,7 @@ def apply_custom_filters(
         if (
             (first_floor == yes_no_mapping[is_first_floor] or first_floor is None)
             and (last_floor == yes_no_mapping[is_last_floor] or last_floor is None)
-            and (building_type == building_type_mapping[btype] or building_type is None)
+            and (building_type in building_types_mapped or building_type is None)
         ):
             filtered_cards.append(card)
     return filtered_cards

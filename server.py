@@ -29,7 +29,7 @@ class Filter(BaseModel):
 class CustomFilter(BaseModel):
     is_first_floor: str
     is_last_floor: str
-    building_type: str
+    building_type: List[str]
 
 
 class Request(BaseModel):
@@ -56,6 +56,6 @@ async def get_cards(request: Request):
         cards_with_custom_fields,
         is_first_floor=request.custom_filters.is_first_floor,
         is_last_floor=request.custom_filters.is_last_floor,
-        btype=request.custom_filters.building_type,
+        btypes=request.custom_filters.building_type,
     )
     return cards_filtered
