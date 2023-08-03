@@ -148,6 +148,22 @@ def build_url(base_url: str, filters: Dict[str, Union[str, int, List[str]]]) -> 
     return base_url
 
 
+# async def get_olx_page(session, p, filters=None):
+#     base_url = BASE_URL
+#     print(f"base_url : {base_url}")
+
+#     if filters is not None:
+#         base_url = build_url(base_url, filters)
+
+#     url = f"{base_url}&page={p}"
+#     print(f"base_url : {base_url}")
+#     async with session.get(url) as response:
+#         text = await response.text()
+#         soup = BeautifulSoup(text, "lxml")
+#         items = soup.find_all(class_=CARD_CLASS_ID)
+#         return [OLX_HOST + c["href"] for c in items]
+
+
 async def get_olx_page(session, p, filters=None):
     base_url = BASE_URL
 
@@ -155,11 +171,28 @@ async def get_olx_page(session, p, filters=None):
         base_url = build_url(base_url, filters)
 
     url = f"{base_url}&page={p}"
-    async with session.get(url) as response:
-        text = await response.text()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+    }
+
+    print(f"url for parsing: {url}")
+    try:
+        async with session.get(url, headers=headers) as response:
+            if response.status != 200:
+                print(f"Error status: {response.status}")
+                return []
+            text = await response.text()
+    except aiohttp.ClientError as e:
+        print(f"Network error: {e}")
+        return []
+
+    try:
         soup = BeautifulSoup(text, "lxml")
         items = soup.find_all(class_=CARD_CLASS_ID)
         return [OLX_HOST + c["href"] for c in items]
+    except Exception as e:
+        print(f"Parsing error: {e}")
+        return []
 
 
 async def get_olx_pages(pages=5, filters=None):
@@ -184,7 +217,8 @@ def process_props(props):
     for p in props[1:]:
         k, v = p.text.split(":")
         props_dict[k] = v.strip()
-    props_dict["Тип"] = props[0].text
+    if len(props) > 0 and props[0] is not None:
+        props_dict["Тип"] = props[0].text
     return props_dict
 
 
@@ -199,7 +233,8 @@ async def get_card_metadata(session, url_path: str):
         description = soup.find(class_=DESCRIPTION_CLASS_ID)
         card_metadata["Цена"] = price.text if price else None
         images = soup.find_all(class_=IMAGES_CLASS_ID)
-        card_metadata["Описание"] = description.text.strip()
+        if description is not None:
+            card_metadata["Описание"] = description.text.strip()
         card_metadata["Фото"] = [i["src"] for i in images]
         card_metadata["Ссылка"] = url_path
 
@@ -210,36 +245,41 @@ async def get_cards_metadata(cards):
     metadata = []
     conn = sqlite3.connect("olx.db")
     cursor = conn.cursor()
-    cursor.execute("BEGIN TRANSACTION")
-    new_cards = []
-    for card in cards:
-        cursor.execute(
-            "SELECT COUNT(*) FROM cards WHERE url = ? AND card IS NOT NULL",
-            (card,),
-        )
-        count = cursor.fetchone()[0]
-        if count == 0:
-            new_cards.append(card)
-        else:
+    try:
+        cursor.execute("BEGIN TRANSACTION")
+        new_cards = []
+        for card in cards:
             cursor.execute(
-                "SELECT card FROM cards WHERE url = ?",
+                "SELECT COUNT(*) FROM cards WHERE url = ? AND card IS NOT NULL",
                 (card,),
             )
-            data = cursor.fetchone()[0]
-            metadata.append(data)
+            count = cursor.fetchone()[0]
+            if count == 0:
+                new_cards.append(card)
+            else:
+                cursor.execute(
+                    "SELECT card FROM cards WHERE url = ?",
+                    (card,),
+                )
+                data = cursor.fetchone()[0]
+                metadata.append(data)
 
-    async with aiohttp.ClientSession() as session:
-        tasks = [get_card_metadata(session, c) for c in new_cards]
-        new_metadata = await asyncio.gather(*tasks)
-        metadata.extend(new_metadata)
+        async with aiohttp.ClientSession() as session:
+            tasks = [get_card_metadata(session, c) for c in new_cards]
+            new_metadata = await asyncio.gather(*tasks)
+            metadata.extend(new_metadata)
 
-    for card, data in zip(new_cards, new_metadata):
-        cursor.execute(
-            "UPDATE cards SET card = ? WHERE url = ?", (json.dumps(data), card)
-        ),
+        for card, data in zip(new_cards, new_metadata):
+            cursor.execute(
+                "UPDATE cards SET card = ? WHERE url = ?", (json.dumps(data), card)
+            ),
 
-    cursor.execute("COMMIT")
-    conn.close()
+        cursor.execute("COMMIT")
+    except Exception:
+        cursor.execute("ROLLBACK")
+        raise
+    finally:
+        conn.close()
     return metadata
 
 
@@ -252,7 +292,8 @@ def add_custom_fields(cards):
     for c in new_cards:
         floor = c.get(CUSTOM_FIELD_FLOOR)
         last_floor = c.get(CUSTOM_FIELD_LAST_FLOOR)
-        c[CUSTOM_FIELD_IS_FIRST_FLOOR] = "Да" if int(floor) == 1 else "Нет"
+        if floor is not None:
+            c[CUSTOM_FIELD_IS_FIRST_FLOOR] = "Да" if int(floor) == 1 else "Нет"
         if floor is not None and last_floor is not None:
             c[CUSTOM_FIELD_IS_LAST_FLOOR] = "Да" if floor == last_floor else "Нет"
     return new_cards

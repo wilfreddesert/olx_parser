@@ -9,6 +9,8 @@ from olx_parser import (
     setup_database,
 )
 
+# import uvicorn
+
 
 class Filter(BaseModel):
     order: str = None
@@ -50,7 +52,9 @@ async def root():
 async def get_cards(request: Request):
     setup_database()
     urls = await get_olx_pages(request.pages, request.filters.model_dump())
+    print(f"{len(urls)} urls found by get_olx_pages")
     cards = await get_cards_metadata(urls)
+    print(f"{len(cards)} cards processed by get_cards_metadata")
     cards_with_custom_fields = add_custom_fields(cards)
     cards_filtered = apply_custom_filters(
         cards_with_custom_fields,
@@ -59,3 +63,7 @@ async def get_cards(request: Request):
         btypes=request.custom_filters.building_type,
     )
     return cards_filtered
+
+
+# if __name__ == "__main__":
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
