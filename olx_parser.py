@@ -14,6 +14,7 @@ CARD_CLASS_ID = "css-rc5s2u"
 PROPERTIES_CLASS_ID = "css-1r0si1e"
 PRICE_CLASS_ID = "css-47bkj9"
 IMAGES_CLASS_ID = "css-1bmvjcs"
+DESCRIPTION_CLASS_ID = "css-bgzo2k"
 
 ORDER_BY_PRICE_DESC = "ORDER_BY_PRICE_DESC"
 ORDER_BY_PRICE_ASC = "ORDER_BY_PRICE_ASC"
@@ -195,8 +196,10 @@ async def get_card_metadata(session, url_path: str):
         props = soup.find_all(class_=PROPERTIES_CLASS_ID)
         card_metadata = card_metadata | process_props(props)
         price = soup.find(class_=PRICE_CLASS_ID)
+        description = soup.find(class_=DESCRIPTION_CLASS_ID)
         card_metadata["Цена"] = price.text if price else None
         images = soup.find_all(class_=IMAGES_CLASS_ID)
+        card_metadata["Описание"] = description.text.strip()
         card_metadata["Фото"] = [i["src"] for i in images]
         card_metadata["Ссылка"] = url_path
 
