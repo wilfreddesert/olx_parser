@@ -13,6 +13,6 @@ primary_region = "den"
   internal_port = 8080
   force_https = true
   auto_stop_machines = false
-  auto_start_machines = true
+  auto_start_machines = false
   min_machines_running = 0
   processes = ["app"]
